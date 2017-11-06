@@ -90,6 +90,10 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
             success = flip_init(ignore_checks);
             break;
 
+        case AB:
+            success = ab_init(ignore_checks);
+            break;
+
 #if AUTOTUNE_ENABLED == ENABLED
         case AUTOTUNE:
             success = autotune_init(ignore_checks);
