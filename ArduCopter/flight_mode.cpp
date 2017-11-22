@@ -456,6 +456,8 @@ void Copter::notify_flight_mode(control_mode_t mode)
         case GUIDED_NOGPS:
             notify.set_flight_mode_str("GNGP");
             break;
+        case ZIGZAG:
+            notify.set_flight_mode_str("ZIGZAG");
         default:
             notify.set_flight_mode_str("----");
             break;
