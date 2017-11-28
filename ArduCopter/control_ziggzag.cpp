@@ -191,8 +191,8 @@ void Copter::zigzag_run()
         motors->set_desired_spool_state(AP_Motors::DESIRED_THROTTLE_UNLIMITED);
 
 #if PRECISION_LANDING == ENABLED
-        if (do_precision_zigzag()) {
-            precision_zigzag_xy();
+        if (do_precision_loiter()) {
+            precision_loiter_xy();
         }
 #endif
 
