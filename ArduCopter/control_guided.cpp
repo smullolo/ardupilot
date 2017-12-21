@@ -53,6 +53,7 @@ bool Copter::guided_init(bool ignore_checks)
 // guided_takeoff_start - initialises waypoint controller to implement take-off
 bool Copter::guided_takeoff_start(float final_alt_above_home)
 {
+    hal.console->printf("guided_takeoff_start float is >>%f<< \n", final_alt_above_home);
     guided_mode = Guided_TakeOff;
 
     // initialise wpnav destination
@@ -352,25 +353,31 @@ void Copter::guided_takeoff_run()
     if (!motors->armed() || !ap.auto_armed || !motors->get_interlock()) {
         // initialise wpnav targets
         wp_nav->shift_wp_origin_to_current_pos();
+        //hal.console->printf("guided_takeoff_run 1 \n");
 #if FRAME_CONFIG == HELI_FRAME  // Helicopters always stabilize roll/pitch/yaw
         // call attitude controller
         attitude_control->input_euler_angle_roll_pitch_euler_rate_yaw(0, 0, 0, get_smoothing_gain());
         attitude_control->set_throttle_out(0,false,g.throttle_filt);
+        //hal.console->printf("guided_takeoff_run 2 \n");
 #else   // multicopters do not stabilize roll/pitch/yaw when disarmed
         motors->set_desired_spool_state(AP_Motors::DESIRED_SPIN_WHEN_ARMED);
         // reset attitude control targets
         attitude_control->set_throttle_out_unstabilized(0,true,g.throttle_filt);
+        //hal.console->printf("guided_takeoff_run 3 \n");
 #endif
         // clear i term when we're taking off
         set_throttle_takeoff();
+        //hal.console->printf("guided_takeoff_run 4 \n");
         return;
     }
 
     // process pilot's yaw input
     float target_yaw_rate = 0;
+    //hal.console->printf("guided_takeoff_run 5 \n");
     if (!failsafe.radio) {
         // get pilot's desired yaw rate
         target_yaw_rate = get_pilot_desired_yaw_rate(channel_yaw->get_control_in());
+        //hal.console->printf("guided_takeoff_run 6 \n");
     }
 
 #if FRAME_CONFIG == HELI_FRAME

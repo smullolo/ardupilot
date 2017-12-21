@@ -908,6 +908,13 @@ private:
     void loiter_run();
     bool zigzag_init(bool ignore_checks);
     void zigzag_run();
+    void zigzag_auto_control();
+    void zigzag_manual_control();
+    bool zigzag_has_arr_at_dest();
+    void zigzag_calculate_next_dest(Vector3f& next_dest) const;
+    void zigzag_receive_signal_from_auxsw(uint8_t aux_switch_position);
+    bool zigzag_set_destination(const Vector3f& destination, bool use_yaw = false, float yaw_cd = 0.0, bool use_yaw_rate = false, float yaw_rate_cds = 0.0, bool yaw_relative = false);
+    void zigzag_set_yaw_state(bool use_yaw, float yaw_cd, bool use_yaw_rate, float yaw_rate_cds, bool relative_angle);
 #if PRECISION_LANDING == ENABLED
     bool do_precision_loiter();
     bool do_precision_zigzag();
