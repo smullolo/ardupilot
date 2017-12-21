@@ -89,7 +89,6 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
         case FLIP:
             success = flip_init(ignore_checks);
             break;
-
         case ZIGZAG:
             success = zigzag_init(ignore_checks);
             break;
