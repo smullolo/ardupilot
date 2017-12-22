@@ -4,17 +4,24 @@
  * Init and run calls for zigzag flight mode
  */
 
-#define ZIGZAG_RANGE_FROM_CUR_DEST  5
+// #define ZIGZAG_RANGE_FROM_CUR_DEST  5
+#define ZIGZAG_RANGE_AS_STATIC  2
 
 struct {
     bool A_hasbeen_defined;     //true if point A has been defined
     bool B_hasbeen_defined;     //true if point B has been defined
     Vector3f A_pos;
     Vector3f B_pos;
-    Vector3f cur_dest;    //used to judge if plane has arrived ar current destination
+    // Vector3f cur_dest;    //used to judge if plane has arrived ar current destination
     //record how many times zigzag_set_destination() has been called
     uint32_t times_set_zigzag_dest;
 } static zigzag_waypoint_state;
+
+struct {
+    uint32_t last_judge_pos_time;
+    Vector3f last_pos;
+    bool is_keeping_time;
+} static zigzag_judge_moving;
 
 static bool in_zigzag_manual_control;  //true if it's in manual control
 // static uint32_t count_to_define_AB;    //used to define A and B
@@ -64,6 +71,7 @@ bool Copter::zigzag_init(bool ignore_checks)
         in_zigzag_manual_control = false;
         // count_to_define_AB = 0;
         // last_aux_switch_position = 1;
+        zigzag_judge_moving.is_keeping_time = false;
 
         return true;
     }else
@@ -102,7 +110,7 @@ void Copter::zigzag_run()
             //if yes, go to the manual control part by modifying parameter
             //else, fly to current destination
     else{
-        hal.console->printf("In manual control? %s \n",in_zigzag_manual_control?"true":"false");
+        // hal.console->printf("In manual control? %s \n",in_zigzag_manual_control?"true":"false");
         if (in_zigzag_manual_control){
 
             zigzag_manual_control();
@@ -112,8 +120,8 @@ void Copter::zigzag_run()
             if(zigzag_has_arr_at_dest()){  //if the plane has arrived at the current destination
                 in_zigzag_manual_control = true;
                 hal.console->printf("Manual control \n");
-                // wp_nav->init_loiter_target();
-                loiter_init(true);
+                wp_nav->init_loiter_target();
+                // loiter_init(true);
             }
             else{
                 zigzag_auto_control(); 
@@ -216,14 +224,33 @@ void Copter::zigzag_manual_control()
 //zigzag_has_arr_at_next_dest - judge if the plane is within a small area around the current destination
 bool Copter::zigzag_has_arr_at_dest()
 {
+    if(!zigzag_judge_moving.is_keeping_time){
+        zigzag_judge_moving.is_keeping_time = true;
+        zigzag_judge_moving.last_judge_pos_time = AP_HAL::millis();
+        zigzag_judge_moving.last_pos = inertial_nav.get_position();
+    }
+    else {
+        if((AP_HAL::millis() - zigzag_judge_moving.last_judge_pos_time) > 2000){
+            Vector3f cur_pos = inertial_nav.get_position();
+            float dist_x = cur_pos.x-zigzag_judge_moving.last_pos.x;
+            float dist_y = cur_pos.y-zigzag_judge_moving.last_pos.y;
+            if ( (dist_x*dist_x + dist_y*dist_y) < (ZIGZAG_RANGE_AS_STATIC * ZIGZAG_RANGE_AS_STATIC) )
+                return true;
+            else{
+                zigzag_judge_moving.last_judge_pos_time = AP_HAL::millis();
+                zigzag_judge_moving.last_pos = inertial_nav.get_position();
+            }
+        }
+    }
+
     //get current position
-    Vector3f cur_pos = inertial_nav.get_position();
-    float dist_x = cur_pos.x-zigzag_waypoint_state.cur_dest.x;
-    float dist_y = cur_pos.y-zigzag_waypoint_state.cur_dest.y;
-    // get_distance - return distance in meters between two locations
-    hal.console->printf("Distance from destination: %f \n", sqrtf(dist_x*dist_x + dist_y*dist_y));
-    if (dist_x*dist_x + dist_y*dist_y < ZIGZAG_RANGE_FROM_CUR_DEST * ZIGZAG_RANGE_FROM_CUR_DEST)
-        return true;
+    // Vector3f cur_pos = inertial_nav.get_position();
+    // float dist_x = cur_pos.x-zigzag_waypoint_state.cur_dest.x;
+    // float dist_y = cur_pos.y-zigzag_waypoint_state.cur_dest.y;
+    // // get_distance - return distance in meters between two locations
+    // hal.console->printf("Distance from destination: %f \n", sqrtf(dist_x*dist_x + dist_y*dist_y));
+    // if ( (dist_x*dist_x + dist_y*dist_y) < (ZIGZAG_RANGE_FROM_CUR_DEST * ZIGZAG_RANGE_FROM_CUR_DEST) )
+    //     return true;
     return false;
 }
 
@@ -290,7 +317,7 @@ void Copter::zigzag_receive_signal_from_auxsw(uint8_t aux_switch_position)
             // initialise waypoint and spline controller
             wp_nav->wp_and_spline_init();
             zigzag_set_destination(next_dest);
-            zigzag_waypoint_state.cur_dest = next_dest;
+            // zigzag_waypoint_state.cur_dest = next_dest;
             in_zigzag_manual_control = false;
             hal.console->printf("Auto control \n");
         // } 
@@ -327,12 +354,12 @@ bool Copter::zigzag_set_destination(const Vector3f& destination, bool use_yaw, f
     if (zigzag_waypoint_state.times_set_zigzag_dest == 2 && !zigzag_waypoint_state.B_hasbeen_defined){
         zigzag_waypoint_state.B_pos = destination;
         hal.console->printf("B has been defined: X:%f Y:%f\n", destination.x, destination.y);
-        zigzag_waypoint_state.cur_dest = zigzag_waypoint_state.A_pos;   //regard A as first destination
+        // zigzag_waypoint_state.cur_dest = zigzag_waypoint_state.A_pos;   //regard A as first destination
         zigzag_waypoint_state.B_hasbeen_defined = true;
         wp_nav->wp_and_spline_init();
         // set yaw state
         zigzag_set_yaw_state(use_yaw, yaw_cd, use_yaw_rate, yaw_rate_cds, relative_yaw);
-        wp_nav->set_wp_destination(zigzag_waypoint_state.cur_dest, false);
+        wp_nav->set_wp_destination(zigzag_waypoint_state.A_pos, false);
         return true;
     }
 
