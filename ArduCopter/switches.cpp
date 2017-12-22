@@ -197,7 +197,6 @@ void Copter::init_aux_switch_function(int8_t ch_option, uint8_t ch_flag)
         case AUXSW_PRECISION_LOITER:
         case AUXSW_AVOID_PROXIMITY:
         case AUXSW_INVERTED:
-        case AUXSW_WINCH_ENABLE:
             do_aux_switch_function(ch_option, ch_flag);
             break;
     }
@@ -244,8 +243,14 @@ void Copter::do_aux_switch_function(int8_t ch_function, uint8_t ch_flag)
             break;
 
         case AUXSW_SAVE_WP:
-            // save waypoint when switch is brought high
-            if (ch_flag == AUX_SWITCH_HIGH) {
+            if (control_mode == ZIGZAG) {
+                hal.console->printf("Send signal to zigzag \n");
+                zigzag_receive_signal_from_auxsw(ch_flag);
+                // output the vaálue
+                int radio_in = RC_Channels::rc_channel(CH_7)->get_radio_in();
+                hal.console->printf("Channel 7: %d \n", radio_in);
+            }
+            else{
 
                 // do not allow saving new waypoints while we're in auto or disarmed
                 if (control_mode == AUTO || !motors->armed()) {
@@ -269,7 +274,7 @@ void Copter::do_aux_switch_function(int8_t ch_function, uint8_t ch_flag)
                     cmd.content.location.lat = 0;
                     cmd.content.location.lng = 0;
                     cmd.content.location.alt = MAX(current_loc.alt,100);
-
+    
                     // use the current altitude for the target alt for takeoff.
                     // only altitude will matter to the AP mission script for takeoff.
                     if (mission.add_cmd(cmd)) {
@@ -624,38 +629,6 @@ void Copter::do_aux_switch_function(int8_t ch_function, uint8_t ch_flag)
                 break;
             }
 #endif
-            break;
-
-        case AUXSW_WINCH_ENABLE:
-            switch (ch_flag) {
-                case AUX_SWITCH_HIGH:
-                    // high switch maintains current position
-                    g2.winch.release_length(0.0f);
-                    Log_Write_Event(DATA_WINCH_LENGTH_CONTROL);
-                    break;
-                default:
-                    // all other position relax winch
-                    g2.winch.relax();
-                    Log_Write_Event(DATA_WINCH_RELAXED);
-                    break;
-                }
-            break;
-
-        case AUXSW_WINCH_CONTROL:
-            switch (ch_flag) {
-                case AUX_SWITCH_LOW:
-                    // raise winch at maximum speed
-                    g2.winch.set_desired_rate(-g2.winch.get_rate_max());
-                    break;
-                case AUX_SWITCH_HIGH:
-                    // lower winch at maximum speed
-                    g2.winch.set_desired_rate(g2.winch.get_rate_max());
-                    break;
-                case AUX_SWITCH_MIDDLE:
-                default:
-                    g2.winch.set_desired_rate(0.0f);
-                    break;
-                }
             break;
     }
 }

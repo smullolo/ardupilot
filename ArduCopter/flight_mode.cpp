@@ -89,6 +89,9 @@ bool Copter::set_mode(control_mode_t mode, mode_reason_t reason)
         case FLIP:
             success = flip_init(ignore_checks);
             break;
+        case ZIGZAG:
+            success = zigzag_init(ignore_checks);
+            break;
 
 #if AUTOTUNE_ENABLED == ENABLED
         case AUTOTUNE:
@@ -238,6 +241,10 @@ void Copter::update_flight_mode()
             flip_run();
             break;
 
+        case ZIGZAG:
+            zigzag_run();
+            break;
+
 #if AUTOTUNE_ENABLED == ENABLED
         case AUTOTUNE:
             autotune_run();
@@ -344,6 +351,7 @@ bool Copter::mode_requires_GPS(control_mode_t mode)
         case BRAKE:
         case AVOID_ADSB:
         case THROW:
+        case ZIGZAG:
             return true;
         default:
             return false;
@@ -366,7 +374,7 @@ bool Copter::mode_has_manual_throttle(control_mode_t mode)
 //  arming_from_gcs should be set to true if the arming request comes from the ground station
 bool Copter::mode_allows_arming(control_mode_t mode, bool arming_from_gcs)
 {
-    if (mode_has_manual_throttle(mode) || mode == LOITER || mode == ALT_HOLD || mode == POSHOLD || mode == DRIFT || mode == SPORT || mode == THROW || (arming_from_gcs && (mode == GUIDED || mode == GUIDED_NOGPS))) {
+    if (mode_has_manual_throttle(mode) || mode == ZIGZAG || mode == LOITER || mode == ALT_HOLD || mode == POSHOLD || mode == DRIFT || mode == SPORT || mode == THROW || (arming_from_gcs && (mode == GUIDED || mode == GUIDED_NOGPS))) {
         return true;
     }
     return false;
@@ -451,6 +459,8 @@ void Copter::notify_flight_mode(control_mode_t mode)
         case GUIDED_NOGPS:
             notify.set_flight_mode_str("GNGP");
             break;
+        case ZIGZAG:
+            notify.set_flight_mode_str("ZIGZAG");
         default:
             notify.set_flight_mode_str("----");
             break;

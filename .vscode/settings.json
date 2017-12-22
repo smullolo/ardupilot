@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "iterator_base": "cpp",
+        "list": "cpp",
+        "iostream": "cpp",
+        "functional": "cpp",
+        "iterator": "cpp",
+        "type_traits": "cpp"
+    }
+}
